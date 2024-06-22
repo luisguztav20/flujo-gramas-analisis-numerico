@@ -24,6 +24,7 @@ nav{
     margin: 0 auto;
     margin-top: 20px;
     text-align: center;
+
 }
 
 .integrante{
@@ -38,6 +39,7 @@ nav{
     display: flex;
     flex-direction: column;
     justify-content: center;
+    
 }
 
 .nombre{
@@ -71,6 +73,9 @@ nav{
     margin-top: 50px;
     text-align: center;
     margin-bottom: 50px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
 }
 
 .unidad{
@@ -86,7 +91,7 @@ nav{
 
 .boton{
     width: 70%;
-    background-color: rgb(93, 232, 102);
+    background-color: rgb(50, 173, 244);;
     color: white;
     padding: 10px 20px;
     border-radius: 20px;
@@ -94,6 +99,14 @@ nav{
     margin-top: 10px;
     margin-bottom: 10px;
     font-weight: bold;
+    transition: background-color 0.3s, transform 0.3s; /* Transición suave */
+    
+}
+
+.boton:hover{
+    transition: 1;
+    background-color: rgb(93, 232, 102); /* Cambia el color de fondo al pasar el cursor */
+    transform: scale(1.05); /* Agranda ligeramente el botón */
 }
 
 .container-unidad{
@@ -156,6 +169,8 @@ nav{
     width: 40%;
     padding: 30px;
     border-radius: 10px;
+    margin-bottom: 30px;
+    margin-top: 30px;
 }
 
 .lista{
@@ -176,4 +191,21 @@ nav{
 .titulo{
     padding: 20px;
     margin-bottom: 20px;
+}
+
+
+/* Media Queries para dispositivos móviles */
+@media (max-width: 768px) {
+    .integrante, .unidad, .unidad-5, .container-34, .container-34-unidad {
+        width: 100%;
+    }
+
+    .container-integrantes, .container-unidades, .container-observaciones {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .observaciones {
+        width: 80%;
+    }
 }
