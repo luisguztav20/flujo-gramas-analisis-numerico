@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Splines.html</title>
+        <style type="text/css">
+          .end-element { fill : #FFCCFF; }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.17.1/flowchart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+        <!-- <script src="../release/flowchart.min.js"></script> -->
+        <script>
+
+            window.onload = function () {
+                var btn = document.getElementById("run"),
+                    cd = document.getElementById("code"),
+                    chart;
+                    
+                (btn.onclick = function () {
+                    var code = cd.value;
+
+                    if (chart) {
+                      chart.clean();
+                    }
+
+                    chart = flowchart.parse(code);
+                    chart.drawSVG('canvas', {
+                      'x': 0,
+                      'y': 0,
+                      'line-width': 3,
+                      //'maxWidth': 15,//ensures the flowcharts fits within a certain width
+                      'line-length': 50,
+                      'text-margin': 10,
+                      'font-size': 14,
+                      'font': 'normal',
+                      'font-family': 'Helvetica',
+                      'font-weight': 'normal',
+                      'font-color': 'black',
+                      'line-color': 'black',
+                      'element-color': 'black',
+                      'fill': 'white',
+                      'yes-text': 'yes',
+                      'no-text': 'no',
+                      'arrow-end': 'block',
+                      'scale': 1,
+                      'symbols': {
+                        'start': {
+                          'font-size': 14,
+                          'font-color': 'yellow',
+                          'element-color': 'blue',
+                          'fill': 'green',
+                          'class': 'start-element'
+                        },
+                        'inputoutput': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'bisque'
+                        },
+                        'operation': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'linen'
+                        },
+                        'subroutine': {
+                          'font-color': 'black',
+                          'element-color': 'blue',
+                          'fill': 'lightgreen'
+                        },
+                        'condition': {
+                          'font-color': 'red',
+                          'element-color': 'black',
+                          'fill': 'yellow'
+                        },
+                        'end':{
+                          'font-size': 20,
+                          'class': 'end-element'
+                        }
+                      },
+                      'flowstate' : {
+                        //'past' : { 'fill' : '#CCCCCC', 'font-size' : 12},
+                        //'current' : {'fill' : 'yellow', 'font-color' : 'red', 'font-weight' : 'bold'},
+                        //'future' : { 'fill' : '#FFFF99'},
+                        'request' : { 'fill' : 'blue'},
+                        'invalid': {'fill' : '#444444'},
+                        'approved' : { 'fill' : '#58C4A3', 'font-size' : 12, 'yes-text' : 'APPROVED', 'no-text' : 'n/a' },
+                        'rejected' : { 'fill' : '#C45879', 'font-size' : 12, 'yes-text' : 'n/a', 'no-text' : 'REJECTED' }
+                      }
+                    });
+                    //create base64 encoding of SVG to generate download link for title(without html or htm).SVG
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+
+                    const OUTsvgBASE64 = btoa(currentDrawSVG)
+                    doctitle = document.title.replace('.html','');
+                    doctitle = doctitle.replace('.htm','');
+
+
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+                    svgSource = currentDrawSVG
+                    svgXML = currentDrawSVG;
+                    // Use SVG Height and Width from the SVG XML to set canvas size
+                    svgXMLsubstringHeight = svgXML.substring(svgXML.indexOf('height='), svgXML.indexOf('version='));
+                    svgXMLsubstringWidth = svgXML.substring(svgXML.indexOf('width='), svgXML.indexOf('xmlns='));
+                    HeightValue = svgXMLsubstringHeight.substring(svgXMLsubstringHeight.indexOf('"')+1,svgXMLsubstringHeight.lastIndexOf('"'));
+                    WidthValue = svgXMLsubstringWidth.substring(svgXMLsubstringWidth.indexOf('"')+1,svgXMLsubstringWidth.lastIndexOf('"'));
+                    HeightValueInt = Math.round(HeightValue)
+                    WidthValueInt = Math.round(WidthValue)
+                    // setup input for base64SvgToBase64Png
+                    let svgSrc = "data:image/svg+xml;base64,"+OUTsvgBASE64;
+                    var pngBase
+                    imageUtil.base64SvgToBase64Png(svgSrc, WidthValueInt, HeightValueInt).then(pngSrc => {
+                    pngBase = pngSrc
+                    // output download link for base64 PNG converted on download from base64
+                    var pngOutHtml = `<a href="${pngBase}" download="${doctitle}.png">PNG - Click here to download current rendered flowchart as ${doctitle}.png</a>`
+                    document.getElementById("pngbase64").innerHTML=pngOutHtml;
+                    });    
+                    // output download link for base64 SVG converted on download from base64
+                    var svgOutHtml = `<a href="data:image/svg+xml;base64,${OUTsvgBASE64}" download=${doctitle}.svg>SVG - Click here to download current rendered flowchart as ${doctitle}.svg</a> `
+                        document.getElementById("svgbase64").innerHTML=svgOutHtml;
+                    })();
+
+                            };
+                 
+
+// derived from https://stackoverflow.com/a/64800570
+// we need to use web browser canvas to generate a image. In this case png
+let imageUtil = {};
+/**
+ * converts a base64 encoded data url SVG image to a PNG image
+ * @param originalBase64 data url of svg image
+ * @param width target width in pixel of PNG image
+ * @param secondTry used internally to prevent endless recursion
+ * @return {Promise<unknown>} resolves to png data url of the image
+ */
+imageUtil.base64SvgToBase64Png = function (originalBase64, width, height, secondTry) {
+    return new Promise(resolve => {
+        let img = document.createElement('img');
+        img.onload = function () {
+            if (!secondTry && (img.naturalWidth === 0 || img.naturalHeight === 0)) {
+                let svgDoc = base64ToSvgDocument(originalBase64);
+                let fixedDoc = fixSvgDocumentFF(svgDoc);
+                return imageUtil.base64SvgToBase64Png(svgDocumentToBase64(fixedDoc), width, height, true).then(result => {
+                    resolve(result);
+                });
+            }
+            //document.body.appendChild(img);
+            let canvas2 = document.createElement("canvas");
+            //document.body.removeChild(img);
+            canvas2.width = width;
+            canvas2.height = height;
+            let ctx = canvas2.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas2.width, canvas2.height);
+            try {
+                let data = canvas2.toDataURL('image/png');
+                resolve(data);
+            } catch (e) {
+                resolve(null);
+            }
+        };
+        img.src = originalBase64;
+    });
+}
+
+//needed because Firefox doesn't correctly handle SVG with size = 0, see https://bugzilla.mozilla.org/show_bug.cgi?id=700533
+function fixSvgDocumentFF(svgDocument) {
+    try {
+        let widthInt = parseInt(svgDocument.documentElement.width.baseVal.value) || 500;
+        let heightInt = parseInt(svgDocument.documentElement.height.baseVal.value) || 500;
+        svgDocument.documentElement.width.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, widthInt);
+        svgDocument.documentElement.height.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, heightInt);
+        return svgDocument;
+    } catch (e) {
+        return svgDocument;
+    }
+}
+
+function svgDocumentToBase64(svgDocument) {
+    try {
+        let base64EncodedSVG = btoa(new XMLSerializer().serializeToString(svgDocument));
+        return 'data:image/svg+xml;base64,' + base64EncodedSVG;
+    } catch (e) {
+        return null;
+    }
+}
+
+function base64ToSvgDocument(base64) {
+    let svg = atob(base64.substring(base64.indexOf('base64,') + 7));
+    svg = svg.substring(svg.indexOf('<svg'));
+    let parser = new DOMParser();
+    return parser.parseFromString(svg, "image/svg+xml");
+} 
+        </script>
+
+        <script>
+            function HelpText() {
+              var x = document.getElementById("HelpTextBlock");
+              if (x.style.display === "none") {
+                x.style.display = "block";
+              } else {
+                x.style.display = "none";
+              }
+            }
+        </script>
+    </head>
+    <body>
+        <div><textarea id="code" style="width: 100%;" rows="11">op2=>operation: import numpy as np
+op4=>operation: import pandas as pd
+op6=>operation: from sympy import *
+op8=>operation: x = sp.symbols('x')
+op10=>operation: f_x = (E ** x)
+op12=>operation: x_valores = [(- 1), 0, 1]
+op14=>operation: y_valores = []
+op16=>operation: variables = ['a', 'b', 'c', 'd']
+op18=>operation: numero_intervalos = (len(x_valores) - 1)
+op20=>operation: x_evaluar = 0
+op22=>operation: grado = 2
+cond25=>operation: print('En la tabla de valores de X se encuentran valores repetidos') if  valores_repetidos(x_valores)
+cond36=>operation: print(f'''Por favor ingrese los valores de X de menor a mayor
+Esto es necesario para la correcta creación de los intervalos''') if  (not esta_ordenada(x_valores))
+cond47=>condition: if ((f_x != '') and (len(y_valores) == 0))
+op51=>operation: i = 0
+cond54=>condition: while (i < len(x_valores))
+op76=>operation: valor_a_agregar = N(f_x.subs(x, x_valores[i]), 7).evalf(n=7)
+cond79=>operation: print(f'''Error al evaluar el valor x={x_valores[i]},
+El punto no forma parte del dominio de la funcion ingresada''') if  (not valor_a_agregar.is_real)
+sub89=>subroutine: y_valores.append(valor_a_agregar)
+op91=>operation: i = (i + 1)
+cond99=>operation: print(f'''El valor a evaluar no esta dentro de los intervalos
+Por lo tanto no se puede evaluar''') if  ((x_evaluar < x_valores[0]) or (x_evaluar > x_valores[(len(x_valores) - 1)]))
+cond110=>operation: print(f'''el grado {grado} no esta disponible caso
+los grados disponibles son 1,2 y 3''') if  ((grado != 1) and (grado != 2) and (grado != 3))
+op120=>operation: variables = (grado + 1)
+op122=>operation: intervalos = []
+op124=>operation: intervalo = []
+cond127=>condition: if ((len(y_valores) == len(x_valores)) and (len(x_valores) >= 3) and (len(y_valores) >= 3))
+op131=>operation: i = 0
+cond134=>condition: while (i < numero_intervalos)
+op155=>operation: valor1 = x_valores[i]
+op157=>operation: vaor2 = x_valores[(i + 1)]
+sub159=>subroutine: intervalo.append(valor1)
+sub161=>subroutine: intervalo.append(vaor2)
+sub163=>subroutine: intervalos.append([])
+sub165=>subroutine: intervalos[i].extend(intervalo)
+sub167=>subroutine: intervalo.clear()
+op169=>operation: i = (i + 1)
+sub173=>subroutine: print(intervalos)
+op175=>operation: simbolos = []
+cond178=>condition: if (grado == 1)
+op182=>operation: variables = ['a', 'b']
+op184=>operation: tamanio_seccionada = len(intervalos)
+op186=>operation: seccionada = []
+op188=>operation: i = 0
+cond191=>condition: while (i < len(intervalos))
+op220=>operation: o = 0
+cond223=>condition: while (o < len(variables))
+op234=>operation: simbolo = sp.symbols((variables[o] + str(i)))
+sub236=>subroutine: simbolos.append(simbolo)
+op238=>operation: o = (o + 1)
+op242=>operation: i = (i + 1)
+op246=>operation: i = 0
+sub248=>subroutine: print(simbolos)
+cond251=>condition: while (i < len(simbolos))
+op262=>operation: nueva_ecua = ((simbolos[i] * x) + simbolos[(i + 1)])
+sub264=>subroutine: seccionada.append(nueva_ecua)
+op266=>operation: i = (i + 2)
+op270=>operation: evaluar = 0
+sub272=>subroutine: print(seccionada)
+op274=>operation: ecuaciones = []
+cond277=>condition: while (evaluar < len(seccionada))
+op292=>operation: evaluar1 = N(seccionada[evaluar].subs(x, intervalos[evaluar][0]), 7).evalf(n=7)
+op294=>operation: evaluar2 = N(seccionada[evaluar].subs(x, intervalos[evaluar][1]), 7).evalf(n=7)
+sub296=>subroutine: ecuaciones.append((evaluar1 - y_valores[evaluar]))
+sub298=>subroutine: ecuaciones.append((evaluar2 - y_valores[(evaluar + 1)]))
+op300=>operation: evaluar = (evaluar + 1)
+sub304=>subroutine: print(ecuaciones)
+sub306=>subroutine: print(simbolos)
+op308=>operation: soluciones = solve(ecuaciones, simbolos)
+op310=>operation: valores = list(soluciones.values())
+op312=>operation: listafinal = []
+op314=>operation: i = 0
+cond317=>condition: while (i < len(seccionada))
+op328=>operation: solucion = seccionada[i].subs(soluciones)
+sub330=>subroutine: listafinal.append(solucion)
+op332=>operation: i = (i + 1)
+op336=>operation: i = 0
+sub338=>subroutine: print('soluciones simbolos')
+sub340=>subroutine: print(soluciones)
+sub342=>subroutine: print('solucion seccionada')
+cond345=>condition: while (i < len(listafinal))
+sub354=>subroutine: print(listafinal[i], ' ', intervalos[i])
+op356=>operation: i = (i + 1)
+cond361=>condition: if (f_x != '')
+op365=>operation: i = 0
+cond368=>condition: while (i < len(intervalos))
+cond388=>condition: if ((x_evaluar >= intervalos[i][0]) and (x_evaluar <= intervalos[i][1]))
+op392=>operation: cual_ecuacion = i
+sub394=>subroutine: break
+op399=>operation: i = (i + 1)
+op403=>operation: evaluacion = listafinal[cual_ecuacion].subs(x, x_evaluar).evalf(n=7)
+sub405=>subroutine: print(f'''Evaluendo el punto x={x_evaluar}
+En la ecuacion {listafinal[cual_ecuacion]}
+Resultado:{evaluacion}''')
+op407=>operation: vv = N(f_x.subs(x, x_evaluar), 12).evalf()
+op409=>operation: ep = (abs(((vv - evaluacion) / vv)) * 100)
+sub411=>subroutine: print(f'Error Porcentual:{ep}%')
+cond419=>condition: if (grado == 2)
+op423=>operation: variables = ['a', 'b', 'c']
+op425=>operation: tamanio_seccionada = len(intervalos)
+op427=>operation: seccionada = []
+op429=>operation: i = 0
+cond432=>condition: while (i < len(intervalos))
+op461=>operation: o = 0
+cond464=>condition: while (o < len(variables))
+op475=>operation: simbolo = sp.symbols((variables[o] + str(i)))
+sub477=>subroutine: simbolos.append(simbolo)
+op479=>operation: o = (o + 1)
+op483=>operation: i = (i + 1)
+op487=>operation: i = 0
+sub489=>subroutine: print(simbolos)
+cond492=>condition: while (i < len(simbolos))
+op503=>operation: nueva_ecua = (((simbolos[i] * (x ** 2)) + (simbolos[(i + 1)] * x)) + simbolos[(i + 2)])
+sub505=>subroutine: seccionada.append(nueva_ecua)
+op507=>operation: i = (i + 3)
+op511=>operation: evaluar = 0
+op513=>operation: ecuaciones = []
+op515=>operation: evaluar = 0
+cond518=>condition: while (evaluar < len(seccionada))
+op533=>operation: evaluar1 = N(seccionada[evaluar].subs(x, intervalos[evaluar][0]), 7).evalf(n=7)
+op535=>operation: evaluar2 = N(seccionada[evaluar].subs(x, intervalos[evaluar][1]), 7).evalf(n=7)
+sub537=>subroutine: ecuaciones.append((evaluar1 - y_valores[evaluar]))
+sub539=>subroutine: ecuaciones.append((evaluar2 - y_valores[(evaluar + 1)]))
+op541=>operation: evaluar = (evaluar + 1)
+op545=>operation: i = 0
+op547=>operation: seccionada_derivada1 = []
+cond550=>condition: while (i < len(seccionada))
+op561=>operation: derivada = diff(seccionada[i], x)
+sub563=>subroutine: seccionada_derivada1.append(derivada)
+op565=>operation: i = (i + 1)
+op569=>operation: evaluar = 0
+cond572=>condition: while (evaluar < (len(seccionada_derivada1) - 1))
+op583=>operation: evaluar1 = (seccionada_derivada1[evaluar].subs(x, intervalos[evaluar][1]).evalf() - seccionada_derivada1[(evaluar + 1)].subs(x, intervalos[evaluar][1]).evalf())
+sub585=>subroutine: ecuaciones.append(evaluar1)
+op587=>operation: evaluar = (evaluar + 1)
+op591=>operation: copia_simbolos = [*simbolos]
+op593=>operation: Ec = 0
+sub595=>subroutine: print('copias antes', copia_simbolos)
+cond598=>condition: while (Ec < len(ecuaciones))
+op620=>operation: simbolos_libre = ecuaciones[Ec].free_symbols
+op622=>operation: simbolos_librel = list(simbolos_libre)
+cond625=>operation: copia_simbolos.remove(simbolos_librel[0]) if  (len(simbolos_librel) == 1)
+op635=>operation: Ec = (Ec + 1)
+op639=>operation: simbolo_agregar = copia_simbolos[0]
+sub641=>subroutine: ecuaciones.append(simbolo_agregar)
+op643=>operation: i = 0
+op645=>operation: soluciones = solve(ecuaciones, simbolos)
+op647=>operation: valores = list(soluciones.values())
+op649=>operation: listafinal = []
+op651=>operation: i = 0
+cond654=>condition: while (i < len(seccionada))
+op665=>operation: solucion = seccionada[i].subs(soluciones).evalf()
+sub667=>subroutine: listafinal.append(solucion)
+op669=>operation: i = (i + 1)
+op673=>operation: i = 0
+sub675=>subroutine: print('soluciones simbolos')
+sub677=>subroutine: print(soluciones)
+sub679=>subroutine: print('solucion seccionada')
+cond682=>condition: while (i < len(listafinal))
+sub691=>subroutine: print(listafinal[i], ' ', intervalos[i])
+op693=>operation: i = (i + 1)
+cond698=>condition: if (f_x != '')
+op702=>operation: i = 0
+cond705=>condition: while (i < len(intervalos))
+cond725=>condition: if ((x_evaluar >= intervalos[i][0]) and (x_evaluar <= intervalos[i][1]))
+op729=>operation: cual_ecuacion = i
+sub731=>subroutine: break
+op736=>operation: i = (i + 1)
+op740=>operation: evaluacion = listafinal[cual_ecuacion].subs(x, x_evaluar).evalf()
+sub742=>subroutine: print(f'''Evaluendo el punto x={x_evaluar}
+En la ecuacion {listafinal[cual_ecuacion]}
+Resultado:{evaluacion}''')
+op744=>operation: vv = N(f_x.subs(x, x_evaluar), 12).evalf()
+op746=>operation: ep = (abs(((vv - evaluacion) / vv)) * 100)
+sub748=>subroutine: print(f'Error Porcentual:{ep}%')
+op755=>operation: variables = ['a', 'b', 'c', 'd']
+op757=>operation: tamanio_seccionada = len(intervalos)
+op759=>operation: seccionada = []
+op761=>operation: i = 0
+cond764=>condition: while (i < len(intervalos))
+op793=>operation: o = 0
+cond796=>condition: while (o < len(variables))
+op807=>operation: simbolo = sp.symbols((variables[o] + str(i)))
+sub809=>subroutine: simbolos.append(simbolo)
+op811=>operation: o = (o + 1)
+op815=>operation: i = (i + 1)
+op819=>operation: i = 0
+sub821=>subroutine: print(simbolos)
+cond824=>condition: while (i < len(simbolos))
+op835=>operation: nueva_ecua = ((((simbolos[i] * (x ** 3)) + (simbolos[(i + 1)] * (x ** 2))) + (simbolos[(i + 2)] * x)) + simbolos[(i + 3)])
+sub837=>subroutine: seccionada.append(nueva_ecua)
+op839=>operation: i = (i + 4)
+op843=>operation: evaluar = 0
+op845=>operation: ecuaciones = []
+op847=>operation: evaluar = 0
+cond850=>condition: while (evaluar < len(seccionada))
+op865=>operation: evaluar1 = N(seccionada[evaluar].subs(x, intervalos[evaluar][0]), 7).evalf(n=7)
+op867=>operation: evaluar2 = N(seccionada[evaluar].subs(x, intervalos[evaluar][1]), 7).evalf(n=7)
+sub869=>subroutine: ecuaciones.append((evaluar1 - y_valores[evaluar]).evalf())
+sub871=>subroutine: ecuaciones.append((evaluar2 - y_valores[(evaluar + 1)]).evalf())
+op873=>operation: evaluar = (evaluar + 1)
+op877=>operation: i = 0
+op879=>operation: seccionada_derivada1 = []
+cond882=>condition: while (i < len(seccionada))
+op893=>operation: derivada = diff(seccionada[i], x)
+sub895=>subroutine: seccionada_derivada1.append(derivada)
+op897=>operation: i = (i + 1)
+op901=>operation: evaluar = 0
+cond904=>condition: while (evaluar < (len(seccionada_derivada1) - 1))
+op915=>operation: evaluar1 = (seccionada_derivada1[evaluar].subs(x, intervalos[evaluar][1]).evalf(n=7) - seccionada_derivada1[(evaluar + 1)].subs(x, intervalos[evaluar][1]).evalf(n=7))
+sub917=>subroutine: ecuaciones.append(evaluar1)
+op919=>operation: evaluar = (evaluar + 1)
+op923=>operation: i = 0
+op925=>operation: seccionada_derivada2 = []
+cond928=>condition: while (i < len(seccionada_derivada1))
+op939=>operation: derivada = diff(seccionada_derivada1[i], x)
+sub941=>subroutine: seccionada_derivada2.append(derivada)
+op943=>operation: i = (i + 1)
+op947=>operation: evaluar = 0
+cond950=>condition: while (evaluar < (len(seccionada_derivada2) - 1))
+op961=>operation: evaluar1 = (seccionada_derivada2[evaluar].subs(x, intervalos[evaluar][1]).evalf(n=7) - seccionada_derivada2[(evaluar + 1)].subs(x, intervalos[evaluar][1]).evalf(n=7))
+sub963=>subroutine: ecuaciones.append(evaluar1)
+op965=>operation: evaluar = (evaluar + 1)
+op969=>operation: grado1 = seccionada_derivada2[0].subs(x, x_valores[0]).evalf(n=7)
+op971=>operation: grado2 = seccionada_derivada2[(len(seccionada_derivada2) - 1)].subs(x, x_valores[(len(x_valores) - 1)]).evalf(n=7)
+sub973=>subroutine: ecuaciones.append(grado1)
+sub975=>subroutine: ecuaciones.append(grado2)
+op977=>operation: soluciones = solve(ecuaciones, simbolos)
+op979=>operation: valores = list(soluciones.values())
+op981=>operation: listafinal = []
+op983=>operation: i = 0
+cond986=>condition: while (i < len(seccionada))
+op997=>operation: solucion = seccionada[i].subs(soluciones)
+sub999=>subroutine: listafinal.append(solucion)
+op1001=>operation: i = (i + 1)
+op1005=>operation: i = 0
+sub1007=>subroutine: print('soluciones simbolos')
+sub1009=>subroutine: print(soluciones)
+sub1011=>subroutine: print('solucion seccionada')
+cond1014=>condition: while (i < len(listafinal))
+sub1023=>subroutine: print(listafinal[i], ' ', intervalos[i])
+op1025=>operation: i = (i + 1)
+cond1030=>condition: if (f_x != '')
+op1034=>operation: i = 0
+cond1037=>condition: while (i < len(intervalos))
+cond1057=>condition: if ((x_evaluar >= intervalos[i][0]) and (x_evaluar <= intervalos[i][1]))
+op1061=>operation: cual_ecuacion = i
+sub1063=>subroutine: break
+op1068=>operation: i = (i + 1)
+op1072=>operation: evaluacion = listafinal[cual_ecuacion].subs(x, x_evaluar).evalf()
+sub1074=>subroutine: print(f'''Evaluendo el punto x={x_evaluar}
+En la ecuacion {listafinal[cual_ecuacion]}
+Resultado:{evaluacion}''')
+op1076=>operation: vv = N(f_x.subs(x, x_evaluar), 12).evalf()
+op1078=>operation: ep = (abs(((vv - evaluacion) / vv)) * 100)
+sub1080=>subroutine: print(f'Error Porcentual:{ep}%')
+cond1090=>condition: if ((len(y_valores) != len(x_valores)) and (f_x == ''))
+sub1094=>subroutine: print(f'Error las tablas deben tener la misma cantidad de datos')
+cond1099=>operation: print(f'Error las tablas deben tener tres puntos como minimo') if  ((len(x_valores) < 3) or (len(y_valores) < 3))
+
+op2->op4
+op4->op6
+op6->op8
+op8->op10
+op10->op12
+op12->op14
+op14->op16
+op16->op18
+op18->op20
+op20->op22
+op22->cond25
+cond25->cond36
+cond36->cond47
+cond47(yes)->op51
+op51->cond54
+cond54(yes)->op76
+op76->cond79
+cond79->sub89
+sub89->op91
+op91(left)->cond54
+cond54(no)->cond99
+cond99->cond110
+cond110->op120
+op120->op122
+op122->op124
+op124->cond127
+cond127(yes)->op131
+op131->cond134
+cond134(yes)->op155
+op155->op157
+op157->sub159
+sub159->sub161
+sub161->sub163
+sub163->sub165
+sub165->sub167
+sub167->op169
+op169(left)->cond134
+cond134(no)->sub173
+sub173->op175
+op175->cond178
+cond178(yes)->op182
+op182->op184
+op184->op186
+op186->op188
+op188->cond191
+cond191(yes)->op220
+op220->cond223
+cond223(yes)->op234
+op234->sub236
+sub236->op238
+op238(left)->cond223
+cond223(no)->op242
+op242(left)->cond191
+cond191(no)->op246
+op246->sub248
+sub248->cond251
+cond251(yes)->op262
+op262->sub264
+sub264->op266
+op266(left)->cond251
+cond251(no)->op270
+op270->sub272
+sub272->op274
+op274->cond277
+cond277(yes)->op292
+op292->op294
+op294->sub296
+sub296->sub298
+sub298->op300
+op300(left)->cond277
+cond277(no)->sub304
+sub304->sub306
+sub306->op308
+op308->op310
+op310->op312
+op312->op314
+op314->cond317
+cond317(yes)->op328
+op328->sub330
+sub330->op332
+op332(left)->cond317
+cond317(no)->op336
+op336->sub338
+sub338->sub340
+sub340->sub342
+sub342->cond345
+cond345(yes)->sub354
+sub354->op356
+op356(left)->cond345
+cond345(no)->cond361
+cond361(yes)->op365
+op365->cond368
+cond368(yes)->cond388
+cond388(yes)->op392
+op392->sub394
+cond388(no)->op399
+op399(left)->cond368
+cond368(no)->op403
+op403->sub405
+sub405->op407
+op407->op409
+op409->sub411
+cond178(no)->cond419
+cond419(yes)->op423
+op423->op425
+op425->op427
+op427->op429
+op429->cond432
+cond432(yes)->op461
+op461->cond464
+cond464(yes)->op475
+op475->sub477
+sub477->op479
+op479(left)->cond464
+cond464(no)->op483
+op483(left)->cond432
+cond432(no)->op487
+op487->sub489
+sub489->cond492
+cond492(yes)->op503
+op503->sub505
+sub505->op507
+op507(left)->cond492
+cond492(no)->op511
+op511->op513
+op513->op515
+op515->cond518
+cond518(yes)->op533
+op533->op535
+op535->sub537
+sub537->sub539
+sub539->op541
+op541(left)->cond518
+cond518(no)->op545
+op545->op547
+op547->cond550
+cond550(yes)->op561
+op561->sub563
+sub563->op565
+op565(left)->cond550
+cond550(no)->op569
+op569->cond572
+cond572(yes)->op583
+op583->sub585
+sub585->op587
+op587(left)->cond572
+cond572(no)->op591
+op591->op593
+op593->sub595
+sub595->cond598
+cond598(yes)->op620
+op620->op622
+op622->cond625
+cond625->op635
+op635(left)->cond598
+cond598(no)->op639
+op639->sub641
+sub641->op643
+op643->op645
+op645->op647
+op647->op649
+op649->op651
+op651->cond654
+cond654(yes)->op665
+op665->sub667
+sub667->op669
+op669(left)->cond654
+cond654(no)->op673
+op673->sub675
+sub675->sub677
+sub677->sub679
+sub679->cond682
+cond682(yes)->sub691
+sub691->op693
+op693(left)->cond682
+cond682(no)->cond698
+cond698(yes)->op702
+op702->cond705
+cond705(yes)->cond725
+cond725(yes)->op729
+op729->sub731
+cond725(no)->op736
+op736(left)->cond705
+cond705(no)->op740
+op740->sub742
+sub742->op744
+op744->op746
+op746->sub748
+cond419(no)->op755
+op755->op757
+op757->op759
+op759->op761
+op761->cond764
+cond764(yes)->op793
+op793->cond796
+cond796(yes)->op807
+op807->sub809
+sub809->op811
+op811(left)->cond796
+cond796(no)->op815
+op815(left)->cond764
+cond764(no)->op819
+op819->sub821
+sub821->cond824
+cond824(yes)->op835
+op835->sub837
+sub837->op839
+op839(left)->cond824
+cond824(no)->op843
+op843->op845
+op845->op847
+op847->cond850
+cond850(yes)->op865
+op865->op867
+op867->sub869
+sub869->sub871
+sub871->op873
+op873(left)->cond850
+cond850(no)->op877
+op877->op879
+op879->cond882
+cond882(yes)->op893
+op893->sub895
+sub895->op897
+op897(left)->cond882
+cond882(no)->op901
+op901->cond904
+cond904(yes)->op915
+op915->sub917
+sub917->op919
+op919(left)->cond904
+cond904(no)->op923
+op923->op925
+op925->cond928
+cond928(yes)->op939
+op939->sub941
+sub941->op943
+op943(left)->cond928
+cond928(no)->op947
+op947->cond950
+cond950(yes)->op961
+op961->sub963
+sub963->op965
+op965(left)->cond950
+cond950(no)->op969
+op969->op971
+op971->sub973
+sub973->sub975
+sub975->op977
+op977->op979
+op979->op981
+op981->op983
+op983->cond986
+cond986(yes)->op997
+op997->sub999
+sub999->op1001
+op1001(left)->cond986
+cond986(no)->op1005
+op1005->sub1007
+sub1007->sub1009
+sub1009->sub1011
+sub1011->cond1014
+cond1014(yes)->sub1023
+sub1023->op1025
+op1025(left)->cond1014
+cond1014(no)->cond1030
+cond1030(yes)->op1034
+op1034->cond1037
+cond1037(yes)->cond1057
+cond1057(yes)->op1061
+op1061->sub1063
+cond1057(no)->op1068
+op1068(left)->cond1037
+cond1037(no)->op1072
+op1072->sub1074
+sub1074->op1076
+op1076->op1078
+op1078->sub1080
+cond127(no)->cond1090
+cond1090(yes)->sub1094
+cond1090(no)->cond1099
+cond47(no)->cond99
+</textarea></div>
+        <div><button id="run" type="button">Run</button> <button onclick="HelpText()">Format Help</button></div>
+        <div id="HelpTextBlock" style="display:none"><br/>Conditions can also be redirected like cond(yes, bottom) or cond(yes, right)
+... and the other symbols too... like sub1(right)<br/>
+You can also tweak the <b>diagram.drawSVG('diagram', {});</b> script in this file for more changes<br/>
+This is based on <a href="https://github.com/adrai/flowchart.js">flowchart.js on github</a> and <a href="http://flowchart.js.org">http://flowchart.js.org</a> more documentation can be found over there.
+</div><br/><div id="svgbase64"></div>
+        <div id="pngbase64"></div>
+
+        <div id="canvas"></div>
+    </body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Newton_Raphson.html</title>
+        <style type="text/css">
+          .end-element { fill : #FFCCFF; }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.17.1/flowchart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+        <!-- <script src="../release/flowchart.min.js"></script> -->
+        <script>
+
+            window.onload = function () {
+                var btn = document.getElementById("run"),
+                    cd = document.getElementById("code"),
+                    chart;
+                    
+                (btn.onclick = function () {
+                    var code = cd.value;
+
+                    if (chart) {
+                      chart.clean();
+                    }
+
+                    chart = flowchart.parse(code);
+                    chart.drawSVG('canvas', {
+                      'x': 0,
+                      'y': 0,
+                      'line-width': 3,
+                      //'maxWidth': 15,//ensures the flowcharts fits within a certain width
+                      'line-length': 50,
+                      'text-margin': 10,
+                      'font-size': 14,
+                      'font': 'normal',
+                      'font-family': 'Helvetica',
+                      'font-weight': 'normal',
+                      'font-color': 'black',
+                      'line-color': 'black',
+                      'element-color': 'black',
+                      'fill': 'white',
+                      'yes-text': 'yes',
+                      'no-text': 'no',
+                      'arrow-end': 'block',
+                      'scale': 1,
+                      'symbols': {
+                        'start': {
+                          'font-size': 14,
+                          'font-color': 'yellow',
+                          'element-color': 'blue',
+                          'fill': 'green',
+                          'class': 'start-element'
+                        },
+                        'inputoutput': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'bisque'
+                        },
+                        'operation': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'linen'
+                        },
+                        'subroutine': {
+                          'font-color': 'black',
+                          'element-color': 'blue',
+                          'fill': 'lightgreen'
+                        },
+                        'condition': {
+                          'font-color': 'red',
+                          'element-color': 'black',
+                          'fill': 'yellow'
+                        },
+                        'end':{
+                          'font-size': 20,
+                          'class': 'end-element'
+                        }
+                      },
+                      'flowstate' : {
+                        //'past' : { 'fill' : '#CCCCCC', 'font-size' : 12},
+                        //'current' : {'fill' : 'yellow', 'font-color' : 'red', 'font-weight' : 'bold'},
+                        //'future' : { 'fill' : '#FFFF99'},
+                        'request' : { 'fill' : 'blue'},
+                        'invalid': {'fill' : '#444444'},
+                        'approved' : { 'fill' : '#58C4A3', 'font-size' : 12, 'yes-text' : 'APPROVED', 'no-text' : 'n/a' },
+                        'rejected' : { 'fill' : '#C45879', 'font-size' : 12, 'yes-text' : 'n/a', 'no-text' : 'REJECTED' }
+                      }
+                    });
+                    //create base64 encoding of SVG to generate download link for title(without html or htm).SVG
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+
+                    const OUTsvgBASE64 = btoa(currentDrawSVG)
+                    doctitle = document.title.replace('.html','');
+                    doctitle = doctitle.replace('.htm','');
+
+
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+                    svgSource = currentDrawSVG
+                    svgXML = currentDrawSVG;
+                    // Use SVG Height and Width from the SVG XML to set canvas size
+                    svgXMLsubstringHeight = svgXML.substring(svgXML.indexOf('height='), svgXML.indexOf('version='));
+                    svgXMLsubstringWidth = svgXML.substring(svgXML.indexOf('width='), svgXML.indexOf('xmlns='));
+                    HeightValue = svgXMLsubstringHeight.substring(svgXMLsubstringHeight.indexOf('"')+1,svgXMLsubstringHeight.lastIndexOf('"'));
+                    WidthValue = svgXMLsubstringWidth.substring(svgXMLsubstringWidth.indexOf('"')+1,svgXMLsubstringWidth.lastIndexOf('"'));
+                    HeightValueInt = Math.round(HeightValue)
+                    WidthValueInt = Math.round(WidthValue)
+                    // setup input for base64SvgToBase64Png
+                    let svgSrc = "data:image/svg+xml;base64,"+OUTsvgBASE64;
+                    var pngBase
+                    imageUtil.base64SvgToBase64Png(svgSrc, WidthValueInt, HeightValueInt).then(pngSrc => {
+                    pngBase = pngSrc
+                    // output download link for base64 PNG converted on download from base64
+                    var pngOutHtml = `<a href="${pngBase}" download="${doctitle}.png">PNG - Click here to download current rendered flowchart as ${doctitle}.png</a>`
+                    document.getElementById("pngbase64").innerHTML=pngOutHtml;
+                    });    
+                    // output download link for base64 SVG converted on download from base64
+                    var svgOutHtml = `<a href="data:image/svg+xml;base64,${OUTsvgBASE64}" download=${doctitle}.svg>SVG - Click here to download current rendered flowchart as ${doctitle}.svg</a> `
+                        document.getElementById("svgbase64").innerHTML=svgOutHtml;
+                    })();
+
+                            };
+                 
+
+// derived from https://stackoverflow.com/a/64800570
+// we need to use web browser canvas to generate a image. In this case png
+let imageUtil = {};
+/**
+ * converts a base64 encoded data url SVG image to a PNG image
+ * @param originalBase64 data url of svg image
+ * @param width target width in pixel of PNG image
+ * @param secondTry used internally to prevent endless recursion
+ * @return {Promise<unknown>} resolves to png data url of the image
+ */
+imageUtil.base64SvgToBase64Png = function (originalBase64, width, height, secondTry) {
+    return new Promise(resolve => {
+        let img = document.createElement('img');
+        img.onload = function () {
+            if (!secondTry && (img.naturalWidth === 0 || img.naturalHeight === 0)) {
+                let svgDoc = base64ToSvgDocument(originalBase64);
+                let fixedDoc = fixSvgDocumentFF(svgDoc);
+                return imageUtil.base64SvgToBase64Png(svgDocumentToBase64(fixedDoc), width, height, true).then(result => {
+                    resolve(result);
+                });
+            }
+            //document.body.appendChild(img);
+            let canvas2 = document.createElement("canvas");
+            //document.body.removeChild(img);
+            canvas2.width = width;
+            canvas2.height = height;
+            let ctx = canvas2.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas2.width, canvas2.height);
+            try {
+                let data = canvas2.toDataURL('image/png');
+                resolve(data);
+            } catch (e) {
+                resolve(null);
+            }
+        };
+        img.src = originalBase64;
+    });
+}
+
+//needed because Firefox doesn't correctly handle SVG with size = 0, see https://bugzilla.mozilla.org/show_bug.cgi?id=700533
+function fixSvgDocumentFF(svgDocument) {
+    try {
+        let widthInt = parseInt(svgDocument.documentElement.width.baseVal.value) || 500;
+        let heightInt = parseInt(svgDocument.documentElement.height.baseVal.value) || 500;
+        svgDocument.documentElement.width.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, widthInt);
+        svgDocument.documentElement.height.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, heightInt);
+        return svgDocument;
+    } catch (e) {
+        return svgDocument;
+    }
+}
+
+function svgDocumentToBase64(svgDocument) {
+    try {
+        let base64EncodedSVG = btoa(new XMLSerializer().serializeToString(svgDocument));
+        return 'data:image/svg+xml;base64,' + base64EncodedSVG;
+    } catch (e) {
+        return null;
+    }
+}
+
+function base64ToSvgDocument(base64) {
+    let svg = atob(base64.substring(base64.indexOf('base64,') + 7));
+    svg = svg.substring(svg.indexOf('<svg'));
+    let parser = new DOMParser();
+    return parser.parseFromString(svg, "image/svg+xml");
+} 
+        </script>
+
+        <script>
+            function HelpText() {
+              var x = document.getElementById("HelpTextBlock");
+              if (x.style.display === "none") {
+                x.style.display = "block";
+              } else {
+                x.style.display = "none";
+              }
+            }
+        </script>
+    </head>
+    <body>
+        <div><textarea id="code" style="width: 100%;" rows="11">op2=>operation: import pandas as pd
+op4=>operation: import sympy as sp
+op6=>operation: from sympy import *
+op8=>operation: from sympy.core.numbers import *
+op10=>operation: x = sp.symbols('x')
+op12=>operation: cifras = 4
+op14=>operation: xi = 0
+op16=>operation: iteracion = 1
+op18=>operation: aprox_anterior = 0
+op20=>operation: aprox_actual = 0
+op22=>operation: Es = (0.5 * (10 ** (2 - cifras)))
+op24=>operation: fx = ((sp.E ** (- x)) - x)
+op26=>operation: df = pd.DataFrame(columns=['Iteracion', ' Xi', 'f(Xi)', "f'(Xi)", 'Xi+1', 'Error Aproximado'])
+sub28=>subroutine: print('Intervalo [', xi, ']')
+op30=>operation: fx_prima = fx.diff(x)
+op32=>operation: fx2_prima = fx_prima.diff(x)
+op34=>operation: fxi = fx.subs(x, xi).evalf()
+op36=>operation: fxi_prima = fx_prima.subs(x, xi).evalf()
+op38=>operation: fxi2_prima = fx2_prima.subs(x, xi).evalf()
+op40=>operation: convergencia = Abs(((fxi * fxi2_prima) / (fxi_prima ** 2)))
+op42=>operation: comprobacion = True
+cond45=>condition: if ((im(fxi) != 0) or isinstance(fxi, ComplexInfinity))
+sub49=>subroutine: print(f'El punto inicial sale del dominio de la función {fx}')
+op51=>operation: comprobacion = False
+cond56=>condition: if ((im(fxi_prima) != 0) or isinstance(fxi_prima, ComplexInfinity))
+sub60=>subroutine: print(f'El punto inicial sale del dominio de la derivada 1 {fx_prima} ')
+op62=>operation: comprobacion = False
+cond67=>condition: if ((im(fxi2_prima) != 0) or isinstance(fxi2_prima, ComplexInfinity))
+sub71=>subroutine: print(f'El punto inicial sale del dominio de la derivada 2 {fx} ')
+op73=>operation: comprobacion = False
+cond78=>condition: if (isinstance(convergencia, ComplexInfinity) or isinstance(convergencia, NaN))
+sub82=>subroutine: print(f'Se genero una division entre cero al calcular la convergencia ')
+op84=>operation: comprobacion = False
+cond89=>condition: if (convergencia < 1)
+cond94=>condition: while True
+op175=>operation: fxi = fx.subs(x, xi).evalf()
+cond178=>condition: if ((im(fxi) != 0) or isinstance(fxi, ComplexInfinity))
+sub182=>subroutine: print(f'El punto inicial sale del dominio de la función {fx} ')
+sub184=>subroutine: break
+op189=>operation: fx_prima = fx.diff(x)
+op191=>operation: fxi_prima = fx_prima.subs(x, xi).evalf()
+cond194=>condition: if ((im(fxi_prima) != 0) or isinstance(fxi_prima, ComplexInfinity))
+sub198=>subroutine: print(f'El punto inicial sale del dominio de la derivada {fx_prima} ')
+sub200=>subroutine: break
+op205=>operation: xi1 = (xi - (fxi / fxi_prima))
+cond208=>condition: if isinstance(xi1, ComplexInfinity)
+sub212=>subroutine: print(f'Al calcular la xi siguiente se genero una division entre cero ')
+sub214=>subroutine: break
+op219=>operation: Ea = Abs((((xi1 - aprox_anterior) / xi1) * 100)).evalf()
+cond222=>condition: if (isinstance(Ea, ComplexInfinity) or isinstance(Ea, NaN))
+sub226=>subroutine: print(f'Al calcular la Ea se genero una division entre cero ')
+sub228=>subroutine: break
+op233=>operation: df.loc[(iteracion - 1)] = [iteracion, xi, fxi, fxi_prima, xi1, Ea]
+cond236=>condition: if ((Ea < Es) or (iteracion >= 500))
+sub240=>subroutine: break
+op244=>operation: xi = xi1
+op247=>operation: aprox_anterior = xi1
+op249=>operation: iteracion += 1
+sub253=>subroutine: print(df)
+sub255=>subroutine: print('Funcion: ', fx)
+sub257=>subroutine: print('La Raiz es: ', xi1)
+sub259=>subroutine: print('Con un error de: ', Ea, '%')
+sub261=>subroutine: print('Con ', iteracion, 'iteraciones')
+cond266=>operation: print('El criterio de convergencia no se cumplio') if  (convergencia >= 1)
+
+op2->op4
+op4->op6
+op6->op8
+op8->op10
+op10->op12
+op12->op14
+op14->op16
+op16->op18
+op18->op20
+op20->op22
+op22->op24
+op24->op26
+op26->sub28
+sub28->op30
+op30->op32
+op32->op34
+op34->op36
+op36->op38
+op38->op40
+op40->op42
+op42->cond45
+cond45(yes)->sub49
+sub49->op51
+cond45(no)->cond56
+cond56(yes)->sub60
+sub60->op62
+cond56(no)->cond67
+cond67(yes)->sub71
+sub71->op73
+cond67(no)->cond78
+cond78(yes)->sub82
+sub82->op84
+cond78(no)->cond89
+cond89(yes)->cond94
+cond94(yes)->op175
+op175->cond178
+cond178(yes)->sub182
+sub182->sub184
+cond178(no)->op189
+op189->op191
+op191->cond194
+cond194(yes)->sub198
+sub198->sub200
+cond194(no)->op205
+op205->cond208
+cond208(yes)->sub212
+sub212->sub214
+cond208(no)->op219
+op219->cond222
+cond222(yes)->sub226
+sub226->sub228
+cond222(no)->op233
+op233->cond236
+cond236(yes)->sub240
+cond236(no)->op244
+op244->op247
+op247->op249
+op249(left)->cond94
+cond94(no)->sub253
+sub253->sub255
+sub255->sub257
+sub257->sub259
+sub259->sub261
+cond89(no)->cond266
+</textarea></div>
+        <div><button id="run" type="button">Run</button> <button onclick="HelpText()">Format Help</button></div>
+        <div id="HelpTextBlock" style="display:none"><br/>Conditions can also be redirected like cond(yes, bottom) or cond(yes, right)
+... and the other symbols too... like sub1(right)<br/>
+You can also tweak the <b>diagram.drawSVG('diagram', {});</b> script in this file for more changes<br/>
+This is based on <a href="https://github.com/adrai/flowchart.js">flowchart.js on github</a> and <a href="http://flowchart.js.org">http://flowchart.js.org</a> more documentation can be found over there.
+</div><br/><div id="svgbase64"></div>
+        <div id="pngbase64"></div>
+
+        <div id="canvas"></div>
+    </body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Interpolacion_Lagrange.html</title>
+        <style type="text/css">
+          .end-element { fill : #FFCCFF; }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.17.1/flowchart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+        <!-- <script src="../release/flowchart.min.js"></script> -->
+        <script>
+
+            window.onload = function () {
+                var btn = document.getElementById("run"),
+                    cd = document.getElementById("code"),
+                    chart;
+                    
+                (btn.onclick = function () {
+                    var code = cd.value;
+
+                    if (chart) {
+                      chart.clean();
+                    }
+
+                    chart = flowchart.parse(code);
+                    chart.drawSVG('canvas', {
+                      'x': 0,
+                      'y': 0,
+                      'line-width': 3,
+                      //'maxWidth': 15,//ensures the flowcharts fits within a certain width
+                      'line-length': 50,
+                      'text-margin': 10,
+                      'font-size': 14,
+                      'font': 'normal',
+                      'font-family': 'Helvetica',
+                      'font-weight': 'normal',
+                      'font-color': 'black',
+                      'line-color': 'black',
+                      'element-color': 'black',
+                      'fill': 'white',
+                      'yes-text': 'yes',
+                      'no-text': 'no',
+                      'arrow-end': 'block',
+                      'scale': 1,
+                      'symbols': {
+                        'start': {
+                          'font-size': 14,
+                          'font-color': 'yellow',
+                          'element-color': 'blue',
+                          'fill': 'green',
+                          'class': 'start-element'
+                        },
+                        'inputoutput': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'bisque'
+                        },
+                        'operation': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'linen'
+                        },
+                        'subroutine': {
+                          'font-color': 'black',
+                          'element-color': 'blue',
+                          'fill': 'lightgreen'
+                        },
+                        'condition': {
+                          'font-color': 'red',
+                          'element-color': 'black',
+                          'fill': 'yellow'
+                        },
+                        'end':{
+                          'font-size': 20,
+                          'class': 'end-element'
+                        }
+                      },
+                      'flowstate' : {
+                        //'past' : { 'fill' : '#CCCCCC', 'font-size' : 12},
+                        //'current' : {'fill' : 'yellow', 'font-color' : 'red', 'font-weight' : 'bold'},
+                        //'future' : { 'fill' : '#FFFF99'},
+                        'request' : { 'fill' : 'blue'},
+                        'invalid': {'fill' : '#444444'},
+                        'approved' : { 'fill' : '#58C4A3', 'font-size' : 12, 'yes-text' : 'APPROVED', 'no-text' : 'n/a' },
+                        'rejected' : { 'fill' : '#C45879', 'font-size' : 12, 'yes-text' : 'n/a', 'no-text' : 'REJECTED' }
+                      }
+                    });
+                    //create base64 encoding of SVG to generate download link for title(without html or htm).SVG
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+
+                    const OUTsvgBASE64 = btoa(currentDrawSVG)
+                    doctitle = document.title.replace('.html','');
+                    doctitle = doctitle.replace('.htm','');
+
+
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+                    svgSource = currentDrawSVG
+                    svgXML = currentDrawSVG;
+                    // Use SVG Height and Width from the SVG XML to set canvas size
+                    svgXMLsubstringHeight = svgXML.substring(svgXML.indexOf('height='), svgXML.indexOf('version='));
+                    svgXMLsubstringWidth = svgXML.substring(svgXML.indexOf('width='), svgXML.indexOf('xmlns='));
+                    HeightValue = svgXMLsubstringHeight.substring(svgXMLsubstringHeight.indexOf('"')+1,svgXMLsubstringHeight.lastIndexOf('"'));
+                    WidthValue = svgXMLsubstringWidth.substring(svgXMLsubstringWidth.indexOf('"')+1,svgXMLsubstringWidth.lastIndexOf('"'));
+                    HeightValueInt = Math.round(HeightValue)
+                    WidthValueInt = Math.round(WidthValue)
+                    // setup input for base64SvgToBase64Png
+                    let svgSrc = "data:image/svg+xml;base64,"+OUTsvgBASE64;
+                    var pngBase
+                    imageUtil.base64SvgToBase64Png(svgSrc, WidthValueInt, HeightValueInt).then(pngSrc => {
+                    pngBase = pngSrc
+                    // output download link for base64 PNG converted on download from base64
+                    var pngOutHtml = `<a href="${pngBase}" download="${doctitle}.png">PNG - Click here to download current rendered flowchart as ${doctitle}.png</a>`
+                    document.getElementById("pngbase64").innerHTML=pngOutHtml;
+                    });    
+                    // output download link for base64 SVG converted on download from base64
+                    var svgOutHtml = `<a href="data:image/svg+xml;base64,${OUTsvgBASE64}" download=${doctitle}.svg>SVG - Click here to download current rendered flowchart as ${doctitle}.svg</a> `
+                        document.getElementById("svgbase64").innerHTML=svgOutHtml;
+                    })();
+
+                            };
+                 
+
+// derived from https://stackoverflow.com/a/64800570
+// we need to use web browser canvas to generate a image. In this case png
+let imageUtil = {};
+/**
+ * converts a base64 encoded data url SVG image to a PNG image
+ * @param originalBase64 data url of svg image
+ * @param width target width in pixel of PNG image
+ * @param secondTry used internally to prevent endless recursion
+ * @return {Promise<unknown>} resolves to png data url of the image
+ */
+imageUtil.base64SvgToBase64Png = function (originalBase64, width, height, secondTry) {
+    return new Promise(resolve => {
+        let img = document.createElement('img');
+        img.onload = function () {
+            if (!secondTry && (img.naturalWidth === 0 || img.naturalHeight === 0)) {
+                let svgDoc = base64ToSvgDocument(originalBase64);
+                let fixedDoc = fixSvgDocumentFF(svgDoc);
+                return imageUtil.base64SvgToBase64Png(svgDocumentToBase64(fixedDoc), width, height, true).then(result => {
+                    resolve(result);
+                });
+            }
+            //document.body.appendChild(img);
+            let canvas2 = document.createElement("canvas");
+            //document.body.removeChild(img);
+            canvas2.width = width;
+            canvas2.height = height;
+            let ctx = canvas2.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas2.width, canvas2.height);
+            try {
+                let data = canvas2.toDataURL('image/png');
+                resolve(data);
+            } catch (e) {
+                resolve(null);
+            }
+        };
+        img.src = originalBase64;
+    });
+}
+
+//needed because Firefox doesn't correctly handle SVG with size = 0, see https://bugzilla.mozilla.org/show_bug.cgi?id=700533
+function fixSvgDocumentFF(svgDocument) {
+    try {
+        let widthInt = parseInt(svgDocument.documentElement.width.baseVal.value) || 500;
+        let heightInt = parseInt(svgDocument.documentElement.height.baseVal.value) || 500;
+        svgDocument.documentElement.width.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, widthInt);
+        svgDocument.documentElement.height.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, heightInt);
+        return svgDocument;
+    } catch (e) {
+        return svgDocument;
+    }
+}
+
+function svgDocumentToBase64(svgDocument) {
+    try {
+        let base64EncodedSVG = btoa(new XMLSerializer().serializeToString(svgDocument));
+        return 'data:image/svg+xml;base64,' + base64EncodedSVG;
+    } catch (e) {
+        return null;
+    }
+}
+
+function base64ToSvgDocument(base64) {
+    let svg = atob(base64.substring(base64.indexOf('base64,') + 7));
+    svg = svg.substring(svg.indexOf('<svg'));
+    let parser = new DOMParser();
+    return parser.parseFromString(svg, "image/svg+xml");
+} 
+        </script>
+
+        <script>
+            function HelpText() {
+              var x = document.getElementById("HelpTextBlock");
+              if (x.style.display === "none") {
+                x.style.display = "block";
+              } else {
+                x.style.display = "none";
+              }
+            }
+        </script>
+    </head>
+    <body>
+        <div><textarea id="code" style="width: 100%;" rows="11">op2=>operation: import sympy as sp
+op4=>operation: from sympy import *
+op6=>operation: x = sp.symbols('x')
+op8=>operation: f_x = ''
+op10=>operation: xv = [0.4, 2.5, 4.3, 5, 6]
+op12=>operation: yv = [1, 0.5, 2, 2.55, 4]
+op14=>operation: grado = 4
+op16=>operation: evaluar_num = 5.2
+cond19=>operation: print('No es pisible calcular la interpolacion de Lagrange de grado {grado}') if  ((grado < 1) or (grado >= len(xv)))
+op29=>operation: y = 0
+cond32=>condition: if (((len(xv) >= 2) and (len(yv) >= 2)) and (f_x == ''))
+op36=>operation: y = 0
+op38=>operation: i = 0
+cond41=>condition: while (i < (grado + 1))
+op122=>operation: agregar = 0
+op124=>operation: o = 0
+op126=>operation: agregar = (agregar + yv[i])
+sub128=>subroutine: print(agregar)
+cond131=>condition: while (o < (grado + 1))
+cond165=>condition: if (i != o)
+op169=>operation: posible_div0 = ((x - xv[o]) / (xv[i] - xv[o]))
+cond172=>condition: if (posible_div0.is_real == False)
+sub176=>subroutine: print(f'''Se genero division entre 0 al calcular el polinomio De Lagrange
+''')
+sub178=>subroutine: break
+op183=>operation: agregar = (agregar * ((x - xv[o]) / (xv[i] - xv[o])))
+sub185=>subroutine: print(agregar)
+op190=>operation: o = (o + 1)
+op194=>operation: y = (y + agregar)
+op196=>operation: i = (i + 1)
+sub200=>subroutine: print('Respuesta:\n', sp.expand(y))
+sub202=>subroutine: print('interpolar -1\n', y.subs({x: evaluar_num}).evalf())
+cond207=>condition: if ((f_x != '') and (len(xv) >= 2))
+op211=>operation: i = 0
+cond214=>condition: while (i < (grado + 1))
+op237=>operation: evaluar = f_x.subs({x: xv[i]}).evalf()
+cond240=>condition: if (evaluar.is_real == False)
+sub244=>subroutine: print(f'''Al evaluar la funcion {f_x} se evaluo un punto fuera de su dominio
+''')
+sub246=>subroutine: break
+sub251=>subroutine: yv.append(f_x.subs({x: xv[i]}).evalf())
+op253=>operation: i = (i + 1)
+op257=>operation: y = 0
+op259=>operation: i = 0
+cond262=>condition: while (i < (grado + 1))
+op315=>operation: agregar = 0
+op317=>operation: o = 0
+op319=>operation: agregar = (agregar + yv[i])
+sub321=>subroutine: print(agregar)
+cond324=>condition: while (o < (grado + 1))
+cond344=>condition: if (i != o)
+op348=>operation: agregar = (agregar * ((x - xv[o]) / (xv[i] - xv[o])))
+sub350=>subroutine: print(agregar)
+op355=>operation: o = (o + 1)
+op359=>operation: y = (y + agregar)
+op361=>operation: i = (i + 1)
+sub365=>subroutine: print('Respuesta:\n', sp.expand(y))
+sub367=>subroutine: print('interpolar -1\n', y.subs({x: evaluar_num}).evalf())
+cond372=>condition: if ((len(xv) >= 2) and (f_x == '') and (len(yv) == 0))
+sub376=>subroutine: print(f'No hay funcion para crear la tabla f(x)')
+cond381=>condition: if (((len(xv) < 2) or (len(yv) < 2)) and (f_x == ''))
+sub385=>subroutine: print(f'La tabla de valores x o f(x) no cuenta con los valores necesarios')
+cond390=>operation: print(f'La tabla de valores x no cuenta con datos') if  ((f_x != '') and (len(xv) == 0))
+
+op2->op4
+op4->op6
+op6->op8
+op8->op10
+op10->op12
+op12->op14
+op14->op16
+op16->cond19
+cond19->op29
+op29->cond32
+cond32(yes)->op36
+op36->op38
+op38->cond41
+cond41(yes)->op122
+op122->op124
+op124->op126
+op126->sub128
+sub128->cond131
+cond131(yes)->cond165
+cond165(yes)->op169
+op169->cond172
+cond172(yes)->sub176
+sub176->sub178
+cond172(no)->op183
+op183->sub185
+sub185->op190
+op190(left)->cond131
+cond165(no)->op190
+cond131(no)->op194
+op194->op196
+op196(left)->cond41
+cond41(no)->sub200
+sub200->sub202
+cond32(no)->cond207
+cond207(yes)->op211
+op211->cond214
+cond214(yes)->op237
+op237->cond240
+cond240(yes)->sub244
+sub244->sub246
+cond240(no)->sub251
+sub251->op253
+op253(left)->cond214
+cond214(no)->op257
+op257->op259
+op259->cond262
+cond262(yes)->op315
+op315->op317
+op317->op319
+op319->sub321
+sub321->cond324
+cond324(yes)->cond344
+cond344(yes)->op348
+op348->sub350
+sub350->op355
+op355(left)->cond324
+cond344(no)->op355
+cond324(no)->op359
+op359->op361
+op361(left)->cond262
+cond262(no)->sub365
+sub365->sub367
+cond207(no)->cond372
+cond372(yes)->sub376
+cond372(no)->cond381
+cond381(yes)->sub385
+cond381(no)->cond390
+</textarea></div>
+        <div><button id="run" type="button">Run</button> <button onclick="HelpText()">Format Help</button></div>
+        <div id="HelpTextBlock" style="display:none"><br/>Conditions can also be redirected like cond(yes, bottom) or cond(yes, right)
+... and the other symbols too... like sub1(right)<br/>
+You can also tweak the <b>diagram.drawSVG('diagram', {});</b> script in this file for more changes<br/>
+This is based on <a href="https://github.com/adrai/flowchart.js">flowchart.js on github</a> and <a href="http://flowchart.js.org">http://flowchart.js.org</a> more documentation can be found over there.
+</div><br/><div id="svgbase64"></div>
+        <div id="pngbase64"></div>
+
+        <div id="canvas"></div>
+    </body>
+</html>
